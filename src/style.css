@@ -61,8 +61,8 @@ button {
     linear-gradient(160deg, #1c1410 0%, #0a0908 55%, #120e0c 100%);
   background-size: cover;
   background-position: center;
-  transition: background-image 0.9s var(--ease), filter 0.6s ease;
-  filter: saturate(0.75) contrast(1.05);
+  filter: saturate(0.88) contrast(1.06);
+  transition: background-image 0.9s var(--ease), filter 0.6s ease, background-position 0.6s ease;
 }
 
 .bg.has-image {
@@ -70,14 +70,31 @@ button {
   background-repeat: no-repeat;
 }
 
+.app.mode-death .bg {
+  filter: saturate(1.05) contrast(1.12) brightness(0.92);
+}
+
 .vignette {
   position: fixed;
   inset: 0;
   z-index: 1;
   pointer-events: none;
+  /* Keep upper/mid frame readable for CG immersion; darken only the dialogue dock. */
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, transparent 22%, transparent 55%, rgba(0, 0, 0, 0.78) 100%),
-    radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.55) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, transparent 18%, transparent 48%, rgba(0, 0, 0, 0.55) 72%, rgba(0, 0, 0, 0.82) 100%),
+    radial-gradient(ellipse at 50% 28%, transparent 42%, rgba(0, 0, 0, 0.28) 100%);
+}
+
+.app.mode-death .vignette {
+  background:
+    linear-gradient(180deg, rgba(40, 0, 0, 0.22) 0%, transparent 30%, transparent 50%, rgba(20, 0, 0, 0.55) 75%, rgba(8, 0, 0, 0.88) 100%),
+    radial-gradient(ellipse at 50% 35%, transparent 40%, rgba(0, 0, 0, 0.25) 100%);
+}
+
+.app.mode-title .vignette {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, transparent 30%, transparent 55%, rgba(0, 0, 0, 0.75) 100%),
+    radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.45) 100%);
 }
 
 .flash {
@@ -174,13 +191,23 @@ button {
   position: relative;
   z-index: 5;
   min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 4.5rem 1.15rem 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 4.5rem 1.15rem 1.35rem;
+  /* Leave most of the viewport for the background CG. */
+  padding-top: max(38vh, 5.5rem);
+}
+
+.app.mode-title .stage {
+  justify-content: center;
+  padding-top: 4.5rem;
+  padding-bottom: 2rem;
 }
 
 .screen {
-  width: min(720px, 100%);
+  width: min(760px, 100%);
   animation: fadeRise 0.7s var(--ease) both;
 }
 
@@ -279,25 +306,29 @@ button {
   color: #f0c7bf;
 }
 
-/* Scene layout */
+/* Scene layout — VN-style bottom dialogue dock */
 .scene {
-  width: min(720px, 100%);
+  width: min(760px, 100%);
 }
 
 .scene-label {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.55rem;
   font-size: 0.78rem;
   letter-spacing: 0.22em;
   color: var(--accent);
   text-transform: none;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85);
 }
 
 .prose {
-  margin: 0 0 1.4rem;
-  padding: 1.15rem 1.2rem;
-  background: var(--fog);
-  border-left: 2px solid rgba(201, 162, 39, 0.35);
-  backdrop-filter: blur(2px);
+  margin: 0 0 0.85rem;
+  padding: 0.95rem 1.1rem 1.05rem;
+  background: linear-gradient(180deg, rgba(10, 8, 6, 0.55), rgba(8, 6, 5, 0.78));
+  border: 1px solid rgba(232, 223, 210, 0.12);
+  border-left: 2px solid rgba(201, 162, 39, 0.45);
+  backdrop-filter: blur(3px);
+  max-height: min(34vh, 15.5rem);
+  overflow-y: auto;
 }
 
 .prose p {
@@ -324,9 +355,9 @@ button {
 .choice {
   width: 100%;
   text-align: left;
-  padding: 0.95rem 1.05rem;
+  padding: 0.8rem 1rem;
   border: 1px solid var(--line);
-  background: var(--fog-heavy);
+  background: rgba(8, 6, 5, 0.82);
   transition: border-color 0.2s, background 0.2s, transform 0.2s;
 }
 
@@ -354,17 +385,19 @@ button {
   color: var(--ink-mute);
 }
 
-/* Ending screens */
+/* Ending screens — dock text under a full-bleed horror CG */
 .ending {
   text-align: center;
-  padding: 1rem 0 2rem;
+  padding: 0.35rem 0 0.75rem;
+  width: min(760px, 100%);
 }
 
 .ending .ending-kicker {
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.35rem;
   letter-spacing: 0.28em;
   color: var(--danger);
   font-size: 0.85rem;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
 }
 
 .ending.survive .ending-kicker {
@@ -373,38 +406,47 @@ button {
 
 .ending h2 {
   font-family: var(--font-display);
-  font-size: clamp(2rem, 7vw, 3rem);
+  font-size: clamp(1.7rem, 6vw, 2.6rem);
   letter-spacing: 0.12em;
-  margin: 0 0 1rem;
+  margin: 0 0 0.65rem;
   font-weight: 400;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85);
 }
 
 .ending .prose {
   text-align: left;
-  margin-bottom: 1.6rem;
+  margin-bottom: 1rem;
+  max-height: min(32vh, 14rem);
 }
 
 .ending.death .prose {
   border-left-color: var(--danger);
+  background: linear-gradient(180deg, rgba(28, 6, 6, 0.62), rgba(10, 2, 2, 0.86));
 }
 
 /* Mobile */
 @media (max-width: 560px) {
   .stage {
-    padding: 4rem 0.85rem 1.5rem;
-    align-items: end;
+    padding: 3.5rem 0.75rem 1rem;
+    padding-top: max(34vh, 4.5rem);
+    align-items: stretch;
+  }
+
+  .app.mode-title .stage {
+    padding-top: 4rem;
   }
 
   .title-screen {
-    padding-top: 12vh;
+    padding-top: 8vh;
   }
 
   .prose {
-    padding: 1rem 0.9rem;
+    padding: 0.85rem 0.85rem;
+    max-height: min(36vh, 16rem);
   }
 
   .choice {
-    padding: 0.85rem 0.9rem;
+    padding: 0.75rem 0.85rem;
   }
 }
 

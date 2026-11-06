@@ -61,19 +61,29 @@ function setBackground(key, { death = false } = {}) {
     return;
   }
   warmBackground(key);
+  // Light top wash so CG/scene art stays readable; denser only near the dialogue dock.
   const layers = [
     death
-      ? `linear-gradient(180deg, rgba(40,0,0,0.55), rgba(8,4,4,0.78)), url("${url}")`
-      : `linear-gradient(180deg, rgba(8,6,5,0.35), rgba(8,6,5,0.72)), url("${url}")`,
+      ? `linear-gradient(180deg, rgba(30,0,0,0.18) 0%, rgba(8,4,4,0.12) 42%, rgba(8,4,4,0.72) 100%), url("${url}")`
+      : `linear-gradient(180deg, rgba(8,6,5,0.12) 0%, rgba(8,6,5,0.08) 45%, rgba(8,6,5,0.62) 100%), url("${url}")`,
   ];
   if (death) {
-    layers.unshift(`url("${BG.deathOverlay}")`);
+    // Soft blood texture, not a full-screen opaque plate.
+    layers.unshift(
+      `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 70%, rgba(20,0,0,0.45) 100%), url("${BG.deathOverlay}")`
+    );
   }
   bgEl.classList.add("has-image");
   bgEl.style.backgroundImage = layers.join(", ");
-  bgEl.style.backgroundBlendMode = death ? "multiply, normal, normal" : "normal";
-  bgEl.style.backgroundSize = "cover";
-  bgEl.style.backgroundPosition = "center";
+  bgEl.style.backgroundBlendMode = death ? "soft-light, normal, normal" : "normal";
+  bgEl.style.backgroundSize = death ? "cover, cover, cover" : "cover";
+  bgEl.style.backgroundPosition = death ? "center bottom, center, center" : "center";
+}
+
+function setAppMode(mode) {
+  const app = document.getElementById("app");
+  app.classList.remove("mode-title", "mode-scene", "mode-death", "mode-survive");
+  if (mode) app.classList.add(`mode-${mode}`);
 }
 
 function updateStatus() {
@@ -117,6 +127,7 @@ async function go(nodeId) {
 
   if (node.type === "title") {
     topbar.hidden = true;
+    setAppMode("title");
     setBackground("city");
     await audio.playBgm("horror");
     audio.stopHeartbeat();
@@ -126,6 +137,12 @@ async function go(nodeId) {
 
   topbar.hidden = false;
   updateStatus();
+
+  if (node.type === "ending") {
+    setAppMode(node.ending === "death" ? "death" : "survive");
+  } else {
+    setAppMode("scene");
+  }
 
   if (node.bg) setBackground(node.bg, { death: node.ending === "death" });
 

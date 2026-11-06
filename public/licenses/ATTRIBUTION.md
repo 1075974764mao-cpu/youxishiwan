@@ -39,6 +39,7 @@ All assets are downloaded into `public/` (no hotlinking). Licenses verified at s
 | `images/death-blood.jpg` | Bloody Wall (recompressed) | quantumelle | CC0 | https://opengameart.org/content/bloody-wall |
 | `images/death-overlay.jpg` | Bloody Background (recompressed) | Shadow3097 | CC0 | https://opengameart.org/content/bloody-background |
 | `images/bg-zombie-store.jpg`, `bg-zombie-hallway.jpg`, `bg-zombie-garage.jpg` | Original AI-generated scene art for 《断讯》 | Project | Original | Generated for this prologue (18+ horror) |
+| `images/cg-death-*.jpg` | Original AI-generated death CGs for 《断讯》 | Project | Original | Generated for 18+ death endings |
 
 ## Fonts
 
