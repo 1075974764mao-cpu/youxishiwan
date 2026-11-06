@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>断讯 · 文泽序章</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+XiaoWei&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <div id="bg" class="bg" aria-hidden="true"></div>
+      <div class="vignette" aria-hidden="true"></div>
+      <div id="flash" class="flash" aria-hidden="true"></div>
+
+      <header class="topbar" id="topbar" hidden>
+        <div class="status" id="status" aria-live="polite"></div>
+        <button type="button" class="mute-btn" id="muteBtn" aria-label="静音切换">音量</button>
+      </header>
+
+      <main id="stage" class="stage">
+        <!-- screens injected by JS -->
+      </main>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
