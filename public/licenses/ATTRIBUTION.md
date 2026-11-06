@@ -21,7 +21,7 @@ All assets are downloaded into `public/` (no hotlinking). Licenses verified at s
 | `audio/sfx-metal-slam.ogg` | 100 CC0 metal and wood SFX | rubberduck | CC0 | https://opengameart.org/content/100-cc0-metal-and-wood-sfx |
 | `audio/sfx-door-wood.ogg` | 4 Door Closes | StarNinjas | CC0 | https://opengameart.org/content/4-door-closes |
 | `audio/sfx-growl.mp3` | Growl | (OGA: growl) | CC0 | https://opengameart.org/content/growl |
-| `audio/sfx-heartbeat.wav`, `sfx-heartbeat-fast.wav` | Heartbeat Sounds | (OGA) | CC0 | https://opengameart.org/content/heartbeat-sounds |
+| `audio/sfx-heartbeat.mp3`, `sfx-heartbeat-fast.mp3` | Heartbeat Sounds (re-encoded) | (OGA) | CC0 | https://opengameart.org/content/heartbeat-sounds |
 | `audio/sfx-zombie.mp3`, `sfx-zombie2.mp3` | Horror Sound Effects Library | Little Robot Sound Factory | CC-BY 3.0 | https://opengameart.org/content/horror-sound-effects-library |
 | `audio/sfx-horror-sample.mp3` | Horror Sound Effects Library (sample) | Little Robot Sound Factory | CC-BY 3.0 | https://opengameart.org/content/horror-sound-effects-library |
 
@@ -35,9 +35,10 @@ All assets are downloaded into `public/` (no hotlinking). Licenses verified at s
 | `images/bg-corridor.jpg` | UIUC Library Main Stacks | Chevsapher | CC0 | https://commons.wikimedia.org/wiki/File:UIUC_Library_Main_Stacks.jpg |
 | `images/bg-room.jpg` | Empty Room (Unsplash) | (Unsplash / Commons) | CC0 | https://commons.wikimedia.org/wiki/File:Empty_Room_(Unsplash).jpg |
 | `images/bg-hallway.jpg` | Perpendicular hallway 02 | (Commons) | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Perpendicular_hallway_02.jpg |
-| `images/bg-blood-1.png` … `bg-blood-3.png` | walls stained with blood | plemuzic | CC0 | https://opengameart.org/content/walls-stained-with-blood |
-| `images/death-blood.png` | Bloody Wall | quantumelle | CC0 | https://opengameart.org/content/bloody-wall |
-| `images/death-overlay.png` | Bloody Background | Shadow3097 | CC0 | https://opengameart.org/content/bloody-background |
+| `images/bg-blood-1.jpg` … `bg-blood-3.jpg` | walls stained with blood (recompressed) | plemuzic | CC0 | https://opengameart.org/content/walls-stained-with-blood |
+| `images/death-blood.jpg` | Bloody Wall (recompressed) | quantumelle | CC0 | https://opengameart.org/content/bloody-wall |
+| `images/death-overlay.jpg` | Bloody Background (recompressed) | Shadow3097 | CC0 | https://opengameart.org/content/bloody-background |
+| `images/bg-zombie-store.jpg`, `bg-zombie-hallway.jpg`, `bg-zombie-garage.jpg` | Original AI-generated scene art for 《断讯》 | Project | Original | Generated for this prologue (18+ horror) |
 
 ## Fonts
 
