@@ -31,6 +31,28 @@ const FLAG_LABELS = {
   scratched: "擦伤",
 };
 
+const imageCache = new Map();
+
+function preloadImages() {
+  const urls = [...new Set(Object.values(BG))];
+  urls.forEach((url) => {
+    if (imageCache.has(url)) return;
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+    imageCache.set(url, img);
+  });
+}
+
+function warmBackground(key) {
+  const url = BG[key];
+  if (!url || imageCache.has(url)) return;
+  const img = new Image();
+  img.decoding = "async";
+  img.src = url;
+  imageCache.set(url, img);
+}
+
 function setBackground(key, { death = false } = {}) {
   const url = BG[key];
   if (!url) {
@@ -38,6 +60,7 @@ function setBackground(key, { death = false } = {}) {
     bgEl.style.backgroundImage = "";
     return;
   }
+  warmBackground(key);
   const layers = [
     death
       ? `linear-gradient(180deg, rgba(40,0,0,0.55), rgba(8,4,4,0.78)), url("${url}")`
@@ -71,9 +94,15 @@ function applySets(set) {
 
 function fireDeathFlash() {
   flashEl.classList.remove("fire");
-  // reflow
   void flashEl.offsetWidth;
   flashEl.classList.add("fire");
+}
+
+function prefetchChoiceBackgrounds(node) {
+  (node.choices || []).forEach((c) => {
+    const next = nodes[c.next] || nodes[c.fallback];
+    if (next?.bg) warmBackground(next.bg);
+  });
 }
 
 async function go(nodeId) {
@@ -99,7 +128,11 @@ async function go(nodeId) {
   updateStatus();
 
   if (node.bg) setBackground(node.bg, { death: node.ending === "death" });
-  if (node.bgm) await audio.playBgm(node.bgm);
+
+  // Continuous bed: change with environment; false = intentional silence.
+  if (Object.prototype.hasOwnProperty.call(node, "bgm")) {
+    await audio.playBgm(node.bgm);
+  }
 
   if (node.stopHeartbeat) audio.stopHeartbeat();
   if (node.heartbeat === "fast") audio.startHeartbeat(true);
@@ -108,9 +141,17 @@ async function go(nodeId) {
   if (node.sfx) {
     const list = Array.isArray(node.sfx) ? node.sfx : [node.sfx];
     list.forEach((s, i) => {
-      setTimeout(() => audio.playSfx(s, { volume: s.includes("zombie") || s === "growl" ? 0.7 : 0.55 }), i * 180);
+      setTimeout(
+        () =>
+          audio.playSfx(s, {
+            volume: s.includes("zombie") || s === "growl" ? 0.7 : 0.55,
+          }),
+        i * 180
+      );
     });
   }
+
+  prefetchChoiceBackgrounds(node);
 
   if (node.type === "ending") {
     if (node.ending === "death") fireDeathFlash();
@@ -128,7 +169,7 @@ function renderTitle() {
       <p class="subtitle">${GAME.subtitle}</p>
       <p class="tagline">${GAME.tagline}</p>
       <p class="warning">
-        <strong>内容警告：</strong>本作为写实丧尸生存文字冒险，含血腥描写、死亡结局与惊吓音效。建议年满十八岁玩家游玩。可随时静音。
+        <strong>内容警告：</strong>本作为写实丧尸生存文字冒险，含血腥描写、丧尸形象、死亡结局与惊吓音效。面向年满十八岁玩家。可随时静音。
       </p>
       <div class="cta-row">
         <button type="button" class="btn primary" data-action="start">开始序章</button>
@@ -142,7 +183,8 @@ function renderTitle() {
     await audio.unlock();
     await go("intro");
   });
-  stage.querySelector('[data-action="mute"]').addEventListener("click", () => {
+  stage.querySelector('[data-action="mute"]').addEventListener("click", async () => {
+    await audio.unlock();
     const muted = audio.toggleMute();
     stage.querySelector('[data-action="mute"]').textContent = muted ? "开启声音" : "静音";
     muteBtn.textContent = muted ? "已静音" : "音量";
@@ -162,7 +204,11 @@ function renderScene(node) {
     .map((c, i) => {
       const avail = choiceAvailable(c);
       const locked = !avail.ok && !c.fallback;
-      const hint = !avail.ok ? `<span class="hint">${avail.reason}</span>` : c.hint && c.require ? `<span class="hint">${c.hint}</span>` : "";
+      const hint = !avail.ok
+        ? `<span class="hint">${avail.reason}</span>`
+        : c.hint && c.require
+          ? `<span class="hint">${c.hint}</span>`
+          : "";
       return `
         <button type="button" class="choice" data-idx="${i}" ${locked ? "disabled" : ""}>
           <span class="key">${i + 1}</span>${c.text}
@@ -246,5 +292,7 @@ muteBtn.addEventListener("click", async () => {
   muteBtn.textContent = muted ? "已静音" : "音量";
 });
 
-// Boot
+// Boot: warm assets, then title
+audio.preload();
+preloadImages();
 go("title");
