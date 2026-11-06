@@ -52,25 +52,36 @@ button {
   isolation: isolate;
 }
 
-.bg {
+.bg-stack {
   position: fixed;
   inset: 0;
   z-index: 0;
   background:
     radial-gradient(ellipse at 30% 20%, rgba(80, 40, 28, 0.35), transparent 55%),
     linear-gradient(160deg, #1c1410 0%, #0a0908 55%, #120e0c 100%);
-  background-size: cover;
-  background-position: center;
-  filter: saturate(0.88) contrast(1.06);
-  transition: background-image 0.9s var(--ease), filter 0.6s ease, background-position 0.6s ease;
+  overflow: hidden;
 }
 
-.bg.has-image {
+.bg-layer {
+  position: absolute;
+  inset: 0;
   background-color: #0a0908;
   background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  /* Opacity-only crossfade stays on the compositor — avoids background-image jank. */
+  transition: opacity 0.38s var(--ease);
+  filter: saturate(0.88) contrast(1.06);
+  will-change: opacity;
+  pointer-events: none;
 }
 
-.app.mode-death .bg {
+.bg-layer.is-active {
+  opacity: 1;
+}
+
+.app.mode-death .bg-layer {
   filter: saturate(1.05) contrast(1.12) brightness(0.92);
 }
 
@@ -208,17 +219,17 @@ button {
 
 .screen {
   width: min(760px, 100%);
-  animation: fadeRise 0.7s var(--ease) both;
+  animation: fadeRise 0.32s var(--ease) both;
 }
 
 @keyframes fadeRise {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -323,10 +334,10 @@ button {
 .prose {
   margin: 0 0 0.85rem;
   padding: 0.95rem 1.1rem 1.05rem;
-  background: linear-gradient(180deg, rgba(10, 8, 6, 0.55), rgba(8, 6, 5, 0.78));
+  background: linear-gradient(180deg, rgba(10, 8, 6, 0.72), rgba(8, 6, 5, 0.88));
   border: 1px solid rgba(232, 223, 210, 0.12);
   border-left: 2px solid rgba(201, 162, 39, 0.45);
-  backdrop-filter: blur(3px);
+  /* No backdrop-filter — blur was a major transition hitch on mobile. */
   max-height: min(34vh, 15.5rem);
   overflow-y: auto;
 }

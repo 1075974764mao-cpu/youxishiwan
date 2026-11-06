@@ -9,12 +9,27 @@
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+XiaoWei&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+XiaoWei&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <!-- Critical first-screen art -->
+    <link rel="preload" as="image" href="/images/bg-city-night.jpg" />
+    <link rel="preload" as="image" href="/images/bg-room.jpg" />
+    <link rel="preload" as="audio" href="/audio/bgm-horror.mp3" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="app" class="app">
-      <div id="bg" class="bg" aria-hidden="true"></div>
+      <div class="bg-stack" aria-hidden="true">
+        <div id="bgA" class="bg-layer is-active"></div>
+        <div id="bgB" class="bg-layer"></div>
+      </div>
       <div class="vignette" aria-hidden="true"></div>
       <div id="flash" class="flash" aria-hidden="true"></div>
 
