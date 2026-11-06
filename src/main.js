@@ -3,7 +3,8 @@ import { AudioDirector } from "./audio.js";
 import { GAME, nodes, BG } from "./story.js";
 
 const stage = document.getElementById("stage");
-const bgEl = document.getElementById("bg");
+const bgA = document.getElementById("bgA");
+const bgB = document.getElementById("bgB");
 const topbar = document.getElementById("topbar");
 const statusEl = document.getElementById("status");
 const muteBtn = document.getElementById("muteBtn");
@@ -21,6 +22,9 @@ const state = {
     quiet: false,
     scratched: false,
   },
+  bgFrontIsA: true,
+  bgKey: null,
+  transitioning: false,
 };
 
 const FLAG_LABELS = {
@@ -31,26 +35,125 @@ const FLAG_LABELS = {
   scratched: "擦伤",
 };
 
-function setBackground(key, { death = false } = {}) {
+/** url -> { img, ready: Promise } */
+const imageCache = new Map();
+
+function ensureImage(url) {
+  if (!url) return null;
+  let entry = imageCache.get(url);
+  if (entry) return entry;
+  const img = new Image();
+  img.decoding = "async";
+  img.fetchPriority = "low";
+  const ready = new Promise((resolve) => {
+    const done = () => {
+      if (img.decode) {
+        img.decode().then(resolve).catch(resolve);
+      } else {
+        resolve();
+      }
+    };
+    if (img.complete && img.naturalWidth) {
+      done();
+      return;
+    }
+    img.onload = done;
+    img.onerror = () => resolve();
+  });
+  img.src = url;
+  entry = { img, ready };
+  imageCache.set(url, entry);
+  return entry;
+}
+
+async function waitImage(url, timeoutMs = 1800) {
+  const entry = ensureImage(url);
+  if (!entry) return;
+  await Promise.race([
+    entry.ready,
+    new Promise((r) => setTimeout(r, timeoutMs)),
+  ]);
+}
+
+function preloadPriority(urls, priority = "low") {
+  [...new Set(urls.filter(Boolean))].forEach((url) => {
+    const entry = ensureImage(url);
+    if (entry?.img) entry.img.fetchPriority = priority;
+  });
+}
+
+function preloadAllImages() {
+  const critical = [BG.city, BG.room, BG.hallway, BG.alley, BG.corridor];
+  preloadPriority(critical, "high");
+  // Remaining art after first paint.
+  requestIdleCallbackSafe(() => {
+    preloadPriority(Object.values(BG), "low");
+  }, 400);
+}
+
+function requestIdleCallbackSafe(fn, timeout = 800) {
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(() => fn(), { timeout });
+  } else {
+    setTimeout(fn, Math.min(timeout, 200));
+  }
+}
+
+function paintLayer(el, key, { death = false } = {}) {
   const url = BG[key];
   if (!url) {
-    bgEl.classList.remove("has-image");
-    bgEl.style.backgroundImage = "";
+    el.style.backgroundImage = "";
     return;
   }
-  const layers = [
-    death
-      ? `linear-gradient(180deg, rgba(40,0,0,0.55), rgba(8,4,4,0.78)), url("${url}")`
-      : `linear-gradient(180deg, rgba(8,6,5,0.35), rgba(8,6,5,0.72)), url("${url}")`,
-  ];
+  const wash = death
+    ? `linear-gradient(180deg, rgba(30,0,0,0.18) 0%, rgba(8,4,4,0.12) 42%, rgba(8,4,4,0.72) 100%)`
+    : `linear-gradient(180deg, rgba(8,6,5,0.12) 0%, rgba(8,6,5,0.08) 45%, rgba(8,6,5,0.62) 100%)`;
+  const layers = [`${wash}, url("${url}")`];
   if (death) {
-    layers.unshift(`url("${BG.deathOverlay}")`);
+    layers.unshift(
+      `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.12) 70%, rgba(20,0,0,0.4) 100%), url("${BG.deathOverlay}")`
+    );
   }
-  bgEl.classList.add("has-image");
-  bgEl.style.backgroundImage = layers.join(", ");
-  bgEl.style.backgroundBlendMode = death ? "multiply, normal, normal" : "normal";
-  bgEl.style.backgroundSize = "cover";
-  bgEl.style.backgroundPosition = "center";
+  el.style.backgroundImage = layers.join(", ");
+  el.style.backgroundBlendMode = death ? "soft-light, normal, normal" : "normal";
+  el.style.backgroundSize = death ? "cover, cover, cover" : "cover";
+  el.style.backgroundPosition = death ? "center bottom, center, center" : "center";
+}
+
+async function setBackground(key, { death = false, instant = false } = {}) {
+  if (!key || !BG[key]) return;
+  if (state.bgKey === key && !instant) return;
+
+  const url = BG[key];
+  ensureImage(url);
+  if (death) ensureImage(BG.deathOverlay);
+  // Prefer decoded frame before swapping to avoid flash/stutter.
+  await waitImage(url, instant ? 120 : 900);
+
+  const front = state.bgFrontIsA ? bgA : bgB;
+  const back = state.bgFrontIsA ? bgB : bgA;
+
+  if (instant || !state.bgKey) {
+    paintLayer(front, key, { death });
+    front.classList.add("is-active");
+    back.classList.remove("is-active");
+    state.bgKey = key;
+    return;
+  }
+
+  paintLayer(back, key, { death });
+  // Force style flush then crossfade via opacity (composited).
+  void back.offsetWidth;
+  back.classList.add("is-active");
+  front.classList.remove("is-active");
+  state.bgFrontIsA = !state.bgFrontIsA;
+  state.bgKey = key;
+}
+
+function setAppMode(mode) {
+  const app = document.getElementById("app");
+  app.classList.remove("mode-title", "mode-scene", "mode-death", "mode-survive");
+  if (mode) app.classList.add(`mode-${mode}`);
 }
 
 function updateStatus() {
@@ -71,9 +174,24 @@ function applySets(set) {
 
 function fireDeathFlash() {
   flashEl.classList.remove("fire");
-  // reflow
   void flashEl.offsetWidth;
   flashEl.classList.add("fire");
+}
+
+function prefetchChoiceBackgrounds(node) {
+  const urls = [];
+  (node.choices || []).forEach((c) => {
+    const next = nodes[c.next];
+    const fb = nodes[c.fallback];
+    if (next?.bg) urls.push(BG[next.bg]);
+    if (fb?.bg) urls.push(BG[fb.bg]);
+    // One hop further for smoother chains.
+    (next?.choices || []).forEach((cc) => {
+      const n2 = nodes[cc.next];
+      if (n2?.bg) urls.push(BG[n2.bg]);
+    });
+  });
+  preloadPriority(urls, "high");
 }
 
 async function go(nodeId) {
@@ -82,43 +200,71 @@ async function go(nodeId) {
     console.error("Missing node", nodeId);
     return;
   }
+  if (state.transitioning) return;
+  state.transitioning = true;
   state.nodeId = nodeId;
 
-  if (node.set) applySets(node.set);
+  try {
+    if (node.set) applySets(node.set);
 
-  if (node.type === "title") {
-    topbar.hidden = true;
-    setBackground("city");
-    await audio.playBgm("horror");
-    audio.stopHeartbeat();
-    renderTitle();
-    return;
+    // Warm next art ASAP (non-blocking).
+    if (node.bg) ensureImage(BG[node.bg]);
+    prefetchChoiceBackgrounds(node);
+
+    if (node.type === "title") {
+      topbar.hidden = true;
+      setAppMode("title");
+      await setBackground("city", { instant: !state.bgKey });
+      audio.playBgm("horror"); // do not block UI
+      audio.stopHeartbeat();
+      renderTitle();
+      return;
+    }
+
+    topbar.hidden = false;
+    updateStatus();
+
+    if (node.type === "ending") {
+      setAppMode(node.ending === "death" ? "death" : "survive");
+    } else {
+      setAppMode("scene");
+    }
+
+    // Background first (await decode briefly), BGM never blocks paint.
+    if (node.bg) {
+      await setBackground(node.bg, { death: node.ending === "death" });
+    }
+    if (Object.prototype.hasOwnProperty.call(node, "bgm")) {
+      audio.playBgm(node.bgm);
+    }
+
+    if (node.stopHeartbeat) audio.stopHeartbeat();
+    if (node.heartbeat === "fast") audio.startHeartbeat(true);
+    else if (node.heartbeat) audio.startHeartbeat(false);
+
+    if (node.sfx) {
+      const list = Array.isArray(node.sfx) ? node.sfx : [node.sfx];
+      list.forEach((s, i) => {
+        setTimeout(
+          () =>
+            audio.playSfx(s, {
+              volume: s.includes("zombie") || s === "growl" ? 0.7 : 0.55,
+            }),
+          i * 120
+        );
+      });
+    }
+
+    if (node.type === "ending") {
+      if (node.ending === "death") fireDeathFlash();
+      renderEnding(node);
+      return;
+    }
+
+    renderScene(node);
+  } finally {
+    state.transitioning = false;
   }
-
-  topbar.hidden = false;
-  updateStatus();
-
-  if (node.bg) setBackground(node.bg, { death: node.ending === "death" });
-  if (node.bgm) await audio.playBgm(node.bgm);
-
-  if (node.stopHeartbeat) audio.stopHeartbeat();
-  if (node.heartbeat === "fast") audio.startHeartbeat(true);
-  else if (node.heartbeat) audio.startHeartbeat(false);
-
-  if (node.sfx) {
-    const list = Array.isArray(node.sfx) ? node.sfx : [node.sfx];
-    list.forEach((s, i) => {
-      setTimeout(() => audio.playSfx(s, { volume: s.includes("zombie") || s === "growl" ? 0.7 : 0.55 }), i * 180);
-    });
-  }
-
-  if (node.type === "ending") {
-    if (node.ending === "death") fireDeathFlash();
-    renderEnding(node);
-    return;
-  }
-
-  renderScene(node);
 }
 
 function renderTitle() {
@@ -128,7 +274,7 @@ function renderTitle() {
       <p class="subtitle">${GAME.subtitle}</p>
       <p class="tagline">${GAME.tagline}</p>
       <p class="warning">
-        <strong>内容警告：</strong>本作为写实丧尸生存文字冒险，含血腥描写、死亡结局与惊吓音效。建议年满十八岁玩家游玩。可随时静音。
+        <strong>内容警告：</strong>本作为写实丧尸生存文字冒险，含血腥描写、丧尸形象、死亡结局与惊吓音效。面向年满十八岁玩家。可随时静音。
       </p>
       <div class="cta-row">
         <button type="button" class="btn primary" data-action="start">开始序章</button>
@@ -140,9 +286,13 @@ function renderTitle() {
   stage.querySelector('[data-action="start"]').addEventListener("click", async () => {
     audio.playSfx("click");
     await audio.unlock();
+    // Kick remaining preloads on first gesture.
+    preloadPriority(Object.values(BG), "high");
+    audio.preloadDeep();
     await go("intro");
   });
-  stage.querySelector('[data-action="mute"]').addEventListener("click", () => {
+  stage.querySelector('[data-action="mute"]').addEventListener("click", async () => {
+    await audio.unlock();
     const muted = audio.toggleMute();
     stage.querySelector('[data-action="mute"]').textContent = muted ? "开启声音" : "静音";
     muteBtn.textContent = muted ? "已静音" : "音量";
@@ -162,7 +312,11 @@ function renderScene(node) {
     .map((c, i) => {
       const avail = choiceAvailable(c);
       const locked = !avail.ok && !c.fallback;
-      const hint = !avail.ok ? `<span class="hint">${avail.reason}</span>` : c.hint && c.require ? `<span class="hint">${c.hint}</span>` : "";
+      const hint = !avail.ok
+        ? `<span class="hint">${avail.reason}</span>`
+        : c.hint && c.require
+          ? `<span class="hint">${c.hint}</span>`
+          : "";
       return `
         <button type="button" class="choice" data-idx="${i}" ${locked ? "disabled" : ""}>
           <span class="key">${i + 1}</span>${c.text}
@@ -247,4 +401,6 @@ muteBtn.addEventListener("click", async () => {
 });
 
 // Boot
+audio.preload();
+preloadAllImages();
 go("title");
